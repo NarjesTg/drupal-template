@@ -1,0 +1,4 @@
+name: Blank Module
+type: module
+description: A blank custom module.
+core_version_requirement: ^10
