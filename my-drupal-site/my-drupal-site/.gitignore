@@ -1,0 +1,4 @@
+/vendor/
+/docroot/core
+/docroot/sites/default/files/*
+/composer.lock
