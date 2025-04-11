@@ -42,8 +42,8 @@ jobs:
         working-directory: ./my-drupal-site/my-drupal-site
         run: |
           docker buildx build \
-            --tag $DOCKER_IMAGE:${{ github.sha }} \
-            --tag $DOCKER_IMAGE:latest \
+            --tag $DOCKER_IMAGE \
+            --tag $DOCKER_IMAGE \
             --push \
             .
 
