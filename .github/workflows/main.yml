@@ -13,7 +13,7 @@ on:
 
 env:
   INSTANCE_IP: "3.232.84.59"
-  DOCKER_IMAGE: "jesstg/drupal-site"  # Votre compte Docker Hub
+  DOCKER_IMAGE: "jesstg/drupal-site:latest"  # Votre compte Docker Hub
   DB_HOST: "ls-3f45b72157ba66d3d5060e529dc58c6aa1cc0dba.c43wcgu6gelw.us-east-1.rds.amazonaws.com"
   DB_PORT: "3306"
   DB_NAME: "db19test"
@@ -75,7 +75,7 @@ jobs:
             sudo chmod -R 775 /mnt/drupal-data
 
             echo "🐳 Pulling new image..."
-            docker pull $DOCKER_IMAGE:${{ github.sha }} || { echo "Pull failed"; exit 1; }
+            docker pull $DOCKER_IMAGE || { echo "Pull failed"; exit 1; }
 
             echo "🧹 Stopping old container..."
             docker stop drupal || true && docker rm drupal || true
@@ -93,7 +93,7 @@ jobs:
               -e DB_USER="$DB_USER" \
               -e DB_PASSWORD='$DB_PASSWORD' \
               -e AWS_REGION="$AWS_REGION" \
-              $DOCKER_IMAGE:${{ github.sha }} || { echo "Run failed"; exit 1; }
+              $DOCKER_IMAGE 
 
             echo "🔍 Waiting..."
             sleep 60
