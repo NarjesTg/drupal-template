@@ -43,7 +43,6 @@ jobs:
         run: |
           docker buildx build \
             --tag $DOCKER_IMAGE \
-            --tag $DOCKER_IMAGE \
             --push \
             .
 
@@ -74,8 +73,8 @@ jobs:
             sudo chown -R 33:33 /mnt/drupal-data
             sudo chmod -R 775 /mnt/drupal-data
 
-            echo "🐳 Pulling new image..."
-            docker pull $DOCKER_IMAGE || { echo "Pull failed"; exit 1; }
+
+            docker pull $DOCKER_IMAGE || { echo "Failed to pull Docker image"; exit 1; }
 
             echo "🧹 Stopping old container..."
             docker stop drupal || true && docker rm drupal || true
