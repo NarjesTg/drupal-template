@@ -3,7 +3,7 @@ name: Sync Config from Lightsail
 on:
   schedule:
     - cron: '*/5 * * * *'  # Toutes les 5 minutes
-  workflow_dispatch:  # Déclenchement manuel possible
+  workflow_dispatch:
 
 jobs:
   sync-config:
@@ -13,7 +13,7 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GH_TOKEN }}  # Pour pousser les changements
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: 🔐 Setup SSH Key
         run: |
@@ -24,8 +24,9 @@ jobs:
 
       - name: 📂 Sync config from Lightsail
         run: |
+          mkdir -p my-drupal-site/my-drupal-site/web/config/sync
           scp -i ~/.ssh/id_rsa -r ec2-user@3.232.84.59:/mnt/drupal-data/config/sync/ my-drupal-site/my-drupal-site/web/config/sync/
-          ls -l my-drupal-site/my-drupal-site/web/config/sync/  # Vérifie les fichiers récupérés
+          ls -l my-drupal-site/my-drupal-site/web/config/sync/  # Vérifie les fichiers
           git add my-drupal-site/my-drupal-site/web/config/sync/
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
