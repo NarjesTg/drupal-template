@@ -41,9 +41,9 @@ jobs:
       - name: 🛠️ Build and push Docker image
         working-directory: ./my-drupal-site/my-drupal-site
         run: |
-          docker buildx build \
-            --tag $DOCKER_IMAGE \
-            --push \
+          docker build -t drupal-site \
+          docker tag  drupal-site   \
+          docker push  $DOCKER_IMAGE  \
             .
 
       - name: 🔐 Setup SSH Key
