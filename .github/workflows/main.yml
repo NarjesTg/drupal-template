@@ -41,7 +41,7 @@ jobs:
       - name: 🛠️ Build and push Docker image
         working-directory: ./my-drupal-site/my-drupal-site
         run: |
-          docker build -t drupal-site \
+          docker build -t drupal-site . \
           docker tag  drupal-site   \
           docker push  $DOCKER_IMAGE  \
             .
