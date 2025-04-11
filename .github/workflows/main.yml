@@ -1,0 +1,114 @@
+name: Deploy Drupal Site to AWS Lightsail
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      username:
+        description: 'Drupal site username (e.g., jess)'
+        required: true
+        default: 'jess'
+
+env:
+  INSTANCE_IP: "3.232.84.59"
+  DOCKER_IMAGE: "narjestaghlet/drupal-custom"  # Votre compte Docker Hub
+  DB_HOST: "ls-3f45b72157ba66d3d5060e529dc58c6aa1cc0dba.c43wcgu6gelw.us-east-1.rds.amazonaws.com"
+  DB_PORT: "3306"
+  DB_NAME: "db19test"
+  DB_USER: "user"
+  DB_PASSWORD: 't)x(hRUXfNLh_hqm'
+  AWS_REGION: "us-east-1"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: 🔐 Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 🛠️ Build and push Docker image
+        working-directory: ./my-drupal-site/my-drupal-site
+        run: |
+          docker buildx build \
+            --tag $DOCKER_IMAGE:${{ github.sha }} \
+            --tag $DOCKER_IMAGE:latest \
+            --push \
+            .
+
+      - name: 🔐 Setup SSH Key
+        run: |
+          echo "Setting up SSH key..."
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $INSTANCE_IP >> ~/.ssh/known_hosts
+
+      - name: 🚀 Deploy to Lightsail
+        run: |
+          ssh -i ~/.ssh/id_rsa ec2-user@$INSTANCE_IP << 'EOF'
+            echo "🔍 Debugging environment..."
+            docker --version
+
+            echo "🔧 Mounting disk..."
+            if ! mountpoint -q /mnt/drupal-data; then
+              sudo mkfs.ext4 /dev/nvme1n1 || echo "Already formatted"
+              sudo mkdir -p /mnt/drupal-data/files /mnt/drupal-data/config
+              sudo mount /dev/nvme1n1 /mnt/drupal-data
+              echo "/dev/nvme1n1 /mnt/drupal-data ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
+            fi
+
+            echo "📁 Preparing folders..."
+            sudo mkdir -p /mnt/drupal-data/files/inline-images /mnt/drupal-data/config/sync
+            sudo chown -R 33:33 /mnt/drupal-data
+            sudo chmod -R 775 /mnt/drupal-data
+
+            echo "🐳 Pulling new image..."
+            docker pull $DOCKER_IMAGE:${{ github.sha }} || { echo "Pull failed"; exit 1; }
+
+            echo "🧹 Stopping old container..."
+            docker stop drupal || true && docker rm drupal || true
+
+            echo "🏗️ Running new container..."
+            docker run -d \
+              --name drupal \
+              -p 80:80 \
+              --restart unless-stopped \
+              -v /mnt/drupal-data/files:/var/www/html/web/sites/default/files \
+              -v /mnt/drupal-data/config:/var/www/html/web/config \
+              -e DB_HOST="$DB_HOST" \
+              -e DB_PORT="$DB_PORT" \
+              -e DB_NAME="$DB_NAME" \
+              -e DB_USER="$DB_USER" \
+              -e DB_PASSWORD='$DB_PASSWORD' \
+              -e AWS_REGION="$AWS_REGION" \
+              $DOCKER_IMAGE:${{ github.sha }} || { echo "Run failed"; exit 1; }
+
+            echo "🔍 Waiting..."
+            sleep 60
+
+            echo "🔍 Checking status..."
+            docker ps -a
+            docker logs drupal || echo "No logs"
+
+            echo "🔍 Verify core..."
+            docker exec drupal ls -l /var/www/html/web/core/includes/bootstrap.inc || { echo "bootstrap.inc missing!"; exit 1; }
+
+            echo "✅ Done!"
+          EOF
+
+      - name: 🌐 Output Site URL
+        run: |
+          echo "✅ Site: http://$INSTANCE_IP"
+          echo "🔐 Login: http://$INSTANCE_IP/user/login"
